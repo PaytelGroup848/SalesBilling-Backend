@@ -1,9 +1,7 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const pdfController = require('./pdf.controller');
-const { auth } = require('../../middleware/auth.middleware');
+const pdfController = require("./pdf.controller");
 
-router.use(auth);
-router.get('/:billId', pdfController.downloadPdf);
+router.get("/:billId", pdfController.downloadPdf);
 
 module.exports = router;
