@@ -1,4 +1,6 @@
 const puppeteer = require("puppeteer");
+const fs = require("fs");
+const path = require("path");
 
 const companyInfo = {
   companyName: "PayTel Terminal Pvt Ltd.(Delhi)",
@@ -898,28 +900,73 @@ const generateHTML = (bill, client) => {
 
 // ---------- Main export ----------
 const generatePdf = async (bill, client) => {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  console.log(`Generating PDF for bill: ${bill.billNumber}`);
 
+  let browser = null;
   try {
+    browser = await puppeteer.launch({
+      headless: "new",
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--disable-gpu",
+      ],
+    });
+
     const page = await browser.newPage();
+    await page.setViewport({
+      width: 1200,
+      height: 1600,
+      deviceScaleFactor: 1,
+    });
+
     const html = generateHTML(bill, client);
 
-    await page.setContent(html, { waitUntil: "networkidle0" });
+    console.log("Setting HTML content...");
+    await page.setContent(html, {
+      waitUntil: ["networkidle0", "domcontentloaded"],
+      timeout: 30000,
+    });
 
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    console.log("Generating PDF...");
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      preferCSSPageSize: false,
-      margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+      preferCSSPageSize: true,
+      margin: {
+        top: "20px",
+        bottom: "20px",
+        left: "20px",
+        right: "20px",
+      },
+      displayHeaderFooter: false,
+      landscape: false,
     });
 
+    console.log(
+      `PDF generated successfully. Size: ${(pdfBuffer.length / 1024).toFixed(2)} KB`,
+    );
+
+    // Save PDF for debugging (optional)
+    const debugPath = path.join(__dirname, "debug", `${bill.billNumber}.pdf`);
+    if (!fs.existsSync(path.dirname(debugPath))) {
+      fs.mkdirSync(path.dirname(debugPath), { recursive: true });
+    }
+    fs.writeFileSync(debugPath, pdfBuffer);
+    console.log(`Debug PDF saved: ${debugPath}`);
+
     return Buffer.from(pdfBuffer);
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+    throw new Error(`Failed to generate PDF: ${error.message}`);
   } finally {
-    await browser.close();
+    if (browser) {
+      await browser.close();
+    }
   }
 };
-
 module.exports = { generatePdf };
