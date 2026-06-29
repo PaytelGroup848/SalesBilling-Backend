@@ -25,8 +25,8 @@ const sendBillEmail = async (bill, clientEmail, pdfBuffer) => {
     }
 
     fs.writeFileSync(pdfPath, buffer);
-    console.log(`📄 PDF saved temporarily: ${pdfPath}`);
-    console.log(`📄 PDF size: ${buffer.length} bytes`);
+    console.log(` PDF saved temporarily: ${pdfPath}`);
+    console.log(` PDF size: ${buffer.length} bytes`);
 
     // Read the PDF file and convert to base64
     const pdfData = fs.readFileSync(pdfPath);
@@ -75,8 +75,8 @@ const sendBillEmail = async (bill, clientEmail, pdfBuffer) => {
       ],
     };
 
-    console.log("📧 Sending email with PDF attachment...");
-    console.log(`📄 Base64 length: ${pdfBase64.length}`);
+    console.log(" Sending email with PDF attachment...");
+    console.log(` Base64 length: ${pdfBase64.length}`);
 
     const response = await axios.post(
       "https://api.brevo.com/v3/smtp/email",
@@ -93,15 +93,15 @@ const sendBillEmail = async (bill, clientEmail, pdfBuffer) => {
     // Clean up temp file
     try {
       fs.unlinkSync(pdfPath);
-      console.log("🧹 Temp file cleaned up");
+      console.log(" Temp file cleaned up");
     } catch (err) {
       console.log("Could not delete temp file:", err.message);
     }
 
-    console.log("✅ Email sent successfully:", response.data.messageId);
+    console.log("Email sent successfully:", response.data.messageId);
     return response.data;
   } catch (error) {
-    console.error("❌ Error sending email:");
+    console.error(" Error sending email:");
     if (error.response) {
       console.error("Status:", error.response.status);
       console.error("Data:", JSON.stringify(error.response.data, null, 2));

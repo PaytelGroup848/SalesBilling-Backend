@@ -436,7 +436,7 @@ const sendBillEmail = async (bill, clientEmail, pdfBuffer) => {
                 <div class="contact">
                   <i class="fas fa-envelope"></i> ${process.env.FROM_EMAIL || "support@cloudedata.com"} &nbsp;|&nbsp;
                   <i class="fas fa-globe"></i> ${process.env.COMPANY_WEBSITE || "www.cloudedata.com"} &nbsp;|&nbsp;
-                  <i class="fas fa-phone"></i> +91-XXXXXXXXXX
+                  <i class="fas fa-phone"></i> +91-9311472355
                 </div>
               </div>
               
