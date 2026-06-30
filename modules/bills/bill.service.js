@@ -45,7 +45,18 @@ const createBill = async (billData, userId) => {
 };
 
 const getBills = async (query, user) => {
-  const { page = 1, limit = 10, search, status, service, startDate, endDate } = query;
+  const { 
+    page = 1, 
+    limit = 10, 
+    search, 
+    status, 
+    service, 
+    startDate, 
+    endDate,
+    renewalStartDate,
+    renewalEndDate,
+    renewalFilter // 'today', 'this_week', 'this_month'
+  } = query;
   const filter = {};
 
   if (user.role === ROLES.SALES) {
@@ -56,7 +67,10 @@ const getBills = async (query, user) => {
 
   if (search) {
     const clientIds = await Client.find({
-      companyName: { $regex: search, $options: 'i' },
+      $or: [
+        { companyName: { $regex: search, $options: 'i' } },
+        { representativeName: { $regex: search, $options: 'i' } },
+      ],
     }).distinct('_id');
     
     filter.$or = [
@@ -77,6 +91,43 @@ const getBills = async (query, user) => {
     filter.billingDate = {};
     if (startDate) filter.billingDate.$gte = new Date(startDate);
     if (endDate) filter.billingDate.$lte = new Date(endDate);
+  }
+
+  // Renewal date filters
+  if (renewalStartDate || renewalEndDate) {
+    filter.renewalDate = {};
+    if (renewalStartDate) filter.renewalDate.$gte = new Date(renewalStartDate);
+    if (renewalEndDate) filter.renewalDate.$lte = new Date(renewalEndDate);
+  } else if (renewalFilter) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (renewalFilter === 'today') {
+      filter.renewalDate = {
+        $gte: today,
+        $lt: tomorrow
+      };
+    } else if (renewalFilter === 'this_week') {
+      const weekStart = new Date(today);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      
+      filter.renewalDate = {
+        $gte: weekStart,
+        $lt: weekEnd
+      };
+    } else if (renewalFilter === 'this_month') {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      
+      filter.renewalDate = {
+        $gte: monthStart,
+        $lt: monthEnd
+      };
+    }
   }
 
   const total = await Bill.countDocuments(filter);
