@@ -206,6 +206,7 @@ const termsAndConditions = [
 
 // ---------- Generate HTML ----------
 const generateHTML = (bill, client) => {
+  const isPaid = bill.status === "approved";
   const baseAmount = parseFloat(bill.amount) || 0;
   const gstAmount = parseFloat(((baseAmount * GST_RATE) / 100).toFixed(2));
   const totalAmount = parseFloat((baseAmount + gstAmount).toFixed(2));
@@ -597,6 +598,28 @@ const generateHTML = (bill, client) => {
 
 <!-- ==================== PAGE 1: INVOICE ==================== -->
 <div class="page">
+
+  ${
+    isPaid
+      ? `
+  <div style="
+    position: absolute;
+    top: 12%;
+    left: 80%;
+     transform: translate(-50%, -50%) ;
+    z-index: 10;
+    pointer-events: none;
+    border: 5px solid #4CAF50;
+    border-radius: 12px;
+    padding: 8px 18px;
+    text-align: center;
+    opacity: 0.60;
+  ">
+    <div style="font-size:18px;font-weight:900;color:#4CAF50;letter-spacing:2px;line-height:1;">PAID</div>
+    <div style="font-size:8px;font-weight:700;color:#4CAF50;letter-spacing:1px;">APPROVED</div>
+  </div>`
+      : ""
+  }
 
      <div class="invoice-header">
     <img

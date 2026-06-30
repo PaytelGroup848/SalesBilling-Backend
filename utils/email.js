@@ -416,9 +416,18 @@ const sendBillEmail = async (bill, clientEmail, pdfBuffer) => {
     <div class="invoice-divider"></div>
     
     <!-- Thank You Message -->
-    <div class="invoice-thankyou">
-      <span>Thank you for choosing CloudeData</span>
-    </div>
+   <div class="invoice-thankyou">
+  <span>Thank you for choosing CloudeData</span>
+  <p style="margin-top:10px;font-size:12px;color:#7a7a9a;line-height:1.6;">
+    By using our services, you agree to our
+    <a href="https://cloudedata.com/term-and-conditions/"
+       target="_blank"
+       rel="noopener noreferrer"
+       style="color:#4A90D9;text-decoration:none;font-weight:600;">
+      Terms &amp; Conditions
+    </a>.
+  </p>
+</div>
   </div>
 </div>
               
