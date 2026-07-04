@@ -103,6 +103,7 @@ const getBills = async (query, user) => {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
+
     
     if (renewalFilter === 'today') {
       filter.renewalDate = {

@@ -927,16 +927,19 @@ const generatePdf = async (bill, client) => {
 
   let browser = null;
   try {
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--disable-gpu",
-      ],
-    });
+   browser = await puppeteer.launch({
+     headless: "new",
+     args: [
+       "--no-sandbox",
+       "--disable-setuid-sandbox",
+       "--disable-dev-shm-usage",
+       "--disable-gpu",
+       "--no-zygote",
+       "--single-process",
+       "--disable-web-security", 
+       "--disable-features=IsolateOrigins",
+     ],
+   });
 
     const page = await browser.newPage();
     await page.setViewport({
@@ -948,10 +951,10 @@ const generatePdf = async (bill, client) => {
     const html = generateHTML(bill, client);
 
     console.log("Setting HTML content...");
-    await page.setContent(html, {
-      waitUntil: ["networkidle0", "domcontentloaded"],
-      timeout: 30000,
-    });
+   await page.setContent(html, {
+     waitUntil: "domcontentloaded", 
+     timeout: 15000,
+   });
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
