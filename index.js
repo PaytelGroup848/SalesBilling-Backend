@@ -19,7 +19,7 @@ connectDB();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://billing.fairwoodit.com"],
+    origin: ["http://localhost:5173", "https://billings.cloudedata.com"],
     credentials: true,
   }),
 );

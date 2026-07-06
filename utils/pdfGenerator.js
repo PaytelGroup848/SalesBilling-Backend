@@ -3,21 +3,21 @@ const fs = require("fs");
 const path = require("path");
 
 const companyInfo = {
-  companyName: "PayTel Terminal Pvt Ltd.(Delhi)",
+  companyName: "PayTel Financial Technologies Pvt. Ltd.(Delhi)",
   addressLine1: "A-212, 1st Floor, Phase-3",
   addressLine2: "Okhla Industrial Area",
   cityPincode: "New Delhi-110020",
-  gstin: "07AAMCP1524F1ZK",
+  gstin: "07AALCP3083C1ZH",
   stateName: "Delhi",
   stateCode: "07",
   cin: "U74999DL2020PTC367460",
   email: "customercare@cloudedata.com",
   website: "www.cloudedata.com",
-  bankAccountHolder: "PAYTEL TERMINAL PRIVATE LIMITED",
-  bankName: "ICICI Bank",
-  bankAccountNumber: "002105029512",
-  bankBranch: "Defence Colony, Delhi-110020",
-  bankIFSC: "ICICI0006300",
+  bankAccountHolder: "PAYTEL FINANCIAL TECHNOLOGIES PVT. LTD.",
+  bankName: "Yes Bank Ltd.",
+  bankAccountNumber: "029861900004141",
+  bankBranch: "Okhla Industrial Estate-3",
+  bankIFSC: "YESB0000298",
   declarationTerms: [
     "Support Other Than Cloud Services will not be Provided.",
     "For Software related query, Kindly Contact to the respected Software Company only.",
@@ -33,7 +33,7 @@ const companyInfo = {
 const SERVICE_HSN = {
   ERP_ON_CLOUD: "998315",
   RMS: "998315",
-  FAIRWOOD: "998314",
+  FAIRWOOD: "998315",
 };
 
 const SERVICE_NAMES = {
@@ -927,19 +927,19 @@ const generatePdf = async (bill, client) => {
 
   let browser = null;
   try {
-   browser = await puppeteer.launch({
-     headless: "new",
-     args: [
-       "--no-sandbox",
-       "--disable-setuid-sandbox",
-       "--disable-dev-shm-usage",
-       "--disable-gpu",
-       "--no-zygote",
-       "--single-process",
-       "--disable-web-security", 
-       "--disable-features=IsolateOrigins",
-     ],
-   });
+    browser = await puppeteer.launch({
+      headless: "new",
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--no-zygote",
+        "--single-process",
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins",
+      ],
+    });
 
     const page = await browser.newPage();
     await page.setViewport({
@@ -951,10 +951,10 @@ const generatePdf = async (bill, client) => {
     const html = generateHTML(bill, client);
 
     console.log("Setting HTML content...");
-   await page.setContent(html, {
-     waitUntil: "domcontentloaded", 
-     timeout: 15000,
-   });
+    await page.setContent(html, {
+      waitUntil: "domcontentloaded",
+      timeout: 15000,
+    });
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
