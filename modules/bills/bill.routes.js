@@ -23,13 +23,20 @@ router.post(
   billController.approveBill,
 );
 router.post(
-  "/:id/reject",
+  "/:id/send-for-correction",
   authorize(ROLES.ACCOUNTANT),
-  billController.rejectBill,
+  billController.sendForCorrection,
 );
+
+router.post(
+  "/:id/tally-push ",
+  authorize(ROLES.ACCOUNTANT),
+  billController.approveBill,
+);
+
 router.post(
   "/:id/send-email",
-  authorize(ROLES.SALES),
+  authorize(ROLES.SALES, ROLES.ACCOUNTANT),
   billController.sendBillEmailToClient,
 );
 

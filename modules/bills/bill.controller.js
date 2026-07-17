@@ -64,10 +64,10 @@ const approveBill = async (req, res) => {
   }
 };
 
-const rejectBill = async (req, res) => {
+const sendForCorrection = async (req, res) => {
   try {
-    const bill = await billService.rejectBill(req.params.id, req.user.id, req.body.reason);
-    return successResponse(res, bill, 'Bill rejected successfully');
+    const bill = await billService.sendForCorrection(req.params.id, req.user.id, req.body.reason);
+    return successResponse(res, bill, 'Bill sent for correction successfully');
   } catch (error) {
     return errorResponse(res, error.message);
   }
@@ -90,6 +90,6 @@ module.exports = {
   deleteBill,
   submitBill,
   approveBill,
-  rejectBill,
+  sendForCorrection,
   sendBillEmailToClient,
 };

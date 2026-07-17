@@ -1,29 +1,34 @@
-const Bill = require('./bill.model');
-const Client = require('../clients/client.model');
-const { ROLES } = require('../../constants/roles');
-const { generatePdf } = require('../../utils/pdfGenerator');
-const { sendBillEmail } = require('../../utils/email');
+const Bill = require("./bill.model");
+const Client = require("../clients/client.model");
+const { ROLES } = require("../../constants/roles");
+const { generatePdf } = require("../../utils/pdfGenerator");
+const { sendBillEmail } = require("../../utils/email");
 
 const generateBillNumber = async () => {
   const currentYear = new Date().getFullYear();
-  const prefix = `INV-${currentYear}-`;
-  
-  const latestBill = await Bill.findOne({ billNumber: { $regex: `^${prefix}` } })
-    .sort({ billNumber: -1 });
-  
+
+  const lastTwoDigitOfCurrentYear = String(currentYear).slice(-2);
+
+  // const prefix = `INV-${currentYear}-`;
+  const prefix = `CLOUDE-${lastTwoDigitOfCurrentYear}-`;
+
+  const latestBill = await Bill.findOne({
+    billNumber: { $regex: `^${prefix}` },
+  }).sort({ billNumber: -1 });
+
   let nextNumber = 1;
   if (latestBill) {
-    const latestNumber = parseInt(latestBill.billNumber.split('-')[2]);
+    const latestNumber = parseInt(latestBill.billNumber.split("-")[2]);
     nextNumber = latestNumber + 1;
   }
-  
-  return `${prefix}${String(nextNumber).padStart(4, '0')}`;
+
+  return `${prefix}${String(nextNumber).padStart(4, "0")}`;
 };
 
 const createBill = async (billData, userId) => {
   const client = await Client.findById(billData.clientId);
   if (!client) {
-    throw new Error('Client not found');
+    throw new Error("Client not found");
   }
 
   const billNumber = await generateBillNumber();
@@ -37,44 +42,44 @@ const createBill = async (billData, userId) => {
     billingDate: billData.billingDate,
     renewalDate: billData.renewalDate,
     amount: billData.amount,
-    status: 'draft',
+    status: "draft",
   });
 
   await bill.save();
-  return bill.populate('client createdBy approvedBy rejectedBy');
+  return bill.populate("client createdBy approvedBy correctionBy");
 };
 
 const getBills = async (query, user) => {
-  const { 
-    page = 1, 
-    limit = 10, 
-    search, 
-    status, 
-    service, 
-    startDate, 
+  const {
+    page = 1,
+    limit = 10,
+    search,
+    status,
+    service,
+    startDate,
     endDate,
     renewalStartDate,
     renewalEndDate,
-    renewalFilter // 'today', 'this_week', 'this_month'
+    renewalFilter, // 'today', 'this_week', 'this_month'
   } = query;
   const filter = {};
 
   if (user.role === ROLES.SALES) {
     filter.createdBy = user.id;
   } else if (user.role === ROLES.ACCOUNTANT) {
-    filter.status = { $in: ['pending_approval', 'approved', 'rejected'] };
+    filter.status = { $in: ["pending_approval", "approved", "correction"] };
   }
 
   if (search) {
     const clientIds = await Client.find({
       $or: [
-        { companyName: { $regex: search, $options: 'i' } },
-        { representativeName: { $regex: search, $options: 'i' } },
+        { companyName: { $regex: search, $options: "i" } },
+        { representativeName: { $regex: search, $options: "i" } },
       ],
-    }).distinct('_id');
-    
+    }).distinct("_id");
+
     filter.$or = [
-      { billNumber: { $regex: search, $options: 'i' } },
+      { billNumber: { $regex: search, $options: "i" } },
       { client: { $in: clientIds } },
     ];
   }
@@ -104,39 +109,38 @@ const getBills = async (query, user) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    
-    if (renewalFilter === 'today') {
+    if (renewalFilter === "today") {
       filter.renewalDate = {
         $gte: today,
-        $lt: tomorrow
+        $lt: tomorrow,
       };
-    } else if (renewalFilter === 'this_week') {
+    } else if (renewalFilter === "this_week") {
       const weekStart = new Date(today);
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 7);
-      
+
       filter.renewalDate = {
         $gte: weekStart,
-        $lt: weekEnd
+        $lt: weekEnd,
       };
-    } else if (renewalFilter === 'this_month') {
+    } else if (renewalFilter === "this_month") {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      
+
       filter.renewalDate = {
         $gte: monthStart,
-        $lt: monthEnd
+        $lt: monthEnd,
       };
     }
   }
 
   const total = await Bill.countDocuments(filter);
   const bills = await Bill.find(filter)
-    .populate('client', 'companyName email representativeName phone')
-    .populate('createdBy', 'name email')
-    .populate('approvedBy', 'name email')
-    .populate('rejectedBy', 'name email')
+    .populate("client")
+    .populate("createdBy", "name email")
+    .populate("approvedBy", "name email")
+    .populate("correctionBy", "name email")
     .sort({ createdAt: -1 })
     .limit(limit * 1)
     .skip((page - 1) * limit);
@@ -151,13 +155,13 @@ const getBills = async (query, user) => {
 
 const getBillById = async (id) => {
   const bill = await Bill.findById(id)
-    .populate('client')
-    .populate('createdBy', 'name email')
-    .populate('approvedBy', 'name email')
-    .populate('rejectedBy', 'name email');
-  
+    .populate("client")
+    .populate("createdBy", "name email")
+    .populate("approvedBy", "name email")
+    .populate("correctionBy", "name email");
+
   if (!bill) {
-    throw new Error('Bill not found');
+    throw new Error("Bill not found");
   }
   return bill;
 };
@@ -165,108 +169,109 @@ const getBillById = async (id) => {
 const updateBill = async (id, updateData, user) => {
   const bill = await Bill.findById(id);
   if (!bill) {
-    throw new Error('Bill not found');
+    throw new Error("Bill not found");
   }
 
   if (user.role === ROLES.SALES) {
     if (bill.createdBy.toString() !== user.id) {
-      throw new Error('Not authorized to update this bill');
+      throw new Error("Not authorized to update this bill");
     }
-    if (!['draft', 'rejected'].includes(bill.status)) {
-      throw new Error('Can only update bills in draft or rejected status');
+    if (!["draft", "correction"].includes(bill.status)) {
+      throw new Error("Can only update bills in draft or correction status");
     }
   }
 
-  const updatedBill = await Bill.findByIdAndUpdate(id, updateData, { new: true })
-    .populate('client createdBy approvedBy rejectedBy');
+  const updatedBill = await Bill.findByIdAndUpdate(id, updateData, {
+    new: true,
+  }).populate("client createdBy approvedBy correctionBy");
   return updatedBill;
 };
 
 const deleteBill = async (id, user) => {
   const bill = await Bill.findById(id);
   if (!bill) {
-    throw new Error('Bill not found');
+    throw new Error("Bill not found");
   }
 
   if (user.role === ROLES.SALES) {
     if (bill.createdBy.toString() !== user.id) {
-      throw new Error('Not authorized to delete this bill');
+      throw new Error("Not authorized to delete this bill");
     }
-    if (bill.status !== 'draft') {
-      throw new Error('Can only delete draft bills');
+    if (bill.status !== "draft") {
+      throw new Error("Can only delete draft bills");
     }
   }
 
   await Bill.findByIdAndDelete(id);
-  return { message: 'Bill deleted successfully' };
+  return { message: "Bill deleted successfully" };
 };
 
 const submitBill = async (id, userId) => {
   const bill = await Bill.findById(id);
   if (!bill) {
-    throw new Error('Bill not found');
+    throw new Error("Bill not found");
   }
 
   if (bill.createdBy.toString() !== userId) {
-    throw new Error('Not authorized to submit this bill');
+    throw new Error("Not authorized to submit this bill");
   }
 
-  if (bill.status !== 'draft') {
-    throw new Error('Only draft bills can be submitted');
+  if (!["draft", "correction"].includes(bill.status)) {
+    throw new Error("Only draft or correction bills can be submitted");
   }
 
-  bill.status = 'pending_approval';
+  bill.status = "pending_approval";
   await bill.save();
-  return bill.populate('client createdBy approvedBy rejectedBy');
+  return bill.populate("client createdBy approvedBy correctionBy");
 };
 
 const approveBill = async (id, userId) => {
   const bill = await Bill.findById(id);
   if (!bill) {
-    throw new Error('Bill not found');
+    throw new Error("Bill not found");
   }
 
-  if (bill.status !== 'pending_approval') {
-    throw new Error('Only pending approval bills can be approved');
+  if (bill.status !== "pending_approval") {
+    throw new Error("Only pending approval bills can be approved");
   }
 
-  bill.status = 'approved';
+  bill.status = "approved";
   bill.approvedBy = userId;
   bill.approvedAt = new Date();
   await bill.save();
-  return bill.populate('client createdBy approvedBy rejectedBy');
+  return bill.populate("client createdBy approvedBy correctionBy");
 };
 
-const rejectBill = async (id, userId, reason) => {
+const sendForCorrection = async (id, userId, reason) => {
   const bill = await Bill.findById(id);
   if (!bill) {
-    throw new Error('Bill not found');
+    throw new Error("Bill not found");
   }
 
-  if (bill.status !== 'pending_approval') {
-    throw new Error('Only pending approval bills can be rejected');
+  if (bill.status !== "pending_approval") {
+    throw new Error("Only pending approval bills can be sent for correction");
   }
 
-  bill.status = 'rejected';
-  bill.rejectedBy = userId;
-  bill.rejectedAt = new Date();
-  bill.rejectionReason = reason;
+  bill.status = "correction";
+  bill.correctionBy = userId;
+  bill.correctionAt = new Date();
+  bill.correctionReason = reason;
   await bill.save();
-  return bill.populate('client createdBy approvedBy rejectedBy');
+  return bill.populate("client createdBy approvedBy correctionBy");
 };
 
 const sendBillEmailToClient = async (id, userId) => {
-  const bill = await Bill.findById(id).populate('client');
+  const bill = await Bill.findById(id).populate("client");
   if (!bill) {
-    throw new Error('Bill not found');
+    throw new Error("Bill not found");
   }
 
-  if (bill.createdBy.toString() !== userId) {
-    throw new Error('Not authorized to send this bill');
+  if (bill.createdBy.toString() === userId) {
+    throw new Error("Not authorized to send this bill");
   }
 
-  if (bill.status !== 'approved') {
-    throw new Error('Only approved bills can be sent');
+  if (bill.status !== "approved") {
+    throw new Error("Only approved bills can be sent");
   }
 
   const pdfBuffer = await generatePdf(bill, bill.client);
@@ -274,7 +279,7 @@ const sendBillEmailToClient = async (id, userId) => {
 
   bill.emailSentAt = new Date();
   await bill.save();
-  return { message: 'Bill email sent successfully' };
+  return { message: "Bill email sent successfully" };
 };
 
 module.exports = {
@@ -285,6 +290,6 @@ module.exports = {
   deleteBill,
   submitBill,
   approveBill,
-  rejectBill,
+  sendForCorrection,
   sendBillEmailToClient,
 };

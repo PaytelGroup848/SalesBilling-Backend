@@ -12,14 +12,18 @@ const userRoutes = require("./modules/users/user.routes");
 const clientRoutes = require("./modules/clients/client.routes");
 const billRoutes = require("./modules/bills/bill.routes");
 const pdfRoutes = require("./modules/pdf/pdf.routes");
-
+const tallyRoutes = require("./modules/tally/tally.routes");
 const app = express();
 
 connectDB();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://billings.cloudedata.com"],
+    origin: [
+      "http://localhost:5174",
+      "http://localhost:5173",
+      "https://billings.cloudedata.com",
+    ],
     credentials: true,
   }),
 );
@@ -31,6 +35,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/bills", billRoutes);
 app.use("/api/pdf", pdfRoutes);
+app.use("/api/tally", tallyRoutes);
 
 app.use(errorHandler);
 

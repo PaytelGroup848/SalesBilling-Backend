@@ -2,6 +2,26 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
 
+const getLogoBase64 = () => {
+  try {
+   
+    const logoPath = path.join(__dirname, "../public/Cloudedata.svg");
+
+    if (fs.existsSync(logoPath)) {
+      const logoBuffer = fs.readFileSync(logoPath);
+      const base64Logo = logoBuffer.toString("base64");
+      return `data:image/svg+xml;base64,${base64Logo}`;
+    } else {
+      console.warn("Logo file not found at:", logoPath);
+      
+      return "https://cloudedata.com/Cloudedata.svg";
+    }
+  } catch (error) {
+    console.error("Error reading logo:", error);
+    return "https://cloudedata.com/Cloudedata.svg";
+  }
+};
+
 const companyInfo = {
   companyName: "PayTel Financial Technologies Pvt. Ltd.(Delhi)",
   addressLine1: "A-212, 1st Floor, Phase-3",
@@ -206,6 +226,7 @@ const termsAndConditions = [
 
 // ---------- Generate HTML ----------
 const generateHTML = (bill, client) => {
+  const logoUrl = getLogoBase64();
   const isPaid = bill.status === "approved";
   const baseAmount = parseFloat(bill.amount) || 0;
   const gstAmount = parseFloat(((baseAmount * GST_RATE) / 100).toFixed(2));
@@ -300,7 +321,7 @@ const generateHTML = (bill, client) => {
   width: 120mm;   /* Adjust as needed */
   height: 120mm;
 
-  background: url("https://cloudedata.com/Cloudedata.svg") no-repeat center;
+  background: url("${logoUrl}") no-repeat center;
   background-size: contain;
 
   opacity: 0.2;      /* 0.02 - 0.08 looks best */
@@ -565,7 +586,7 @@ const generateHTML = (bill, client) => {
   width: 120mm;
   height: 120mm;
 
-  background: url("https://cloudedata.com/Cloudedata.svg") no-repeat center;
+  background: url("${logoUrl}") no-repeat center;
   background-size: contain;
 
   opacity: 0.2;
@@ -624,9 +645,10 @@ const generateHTML = (bill, client) => {
      <div class="invoice-header">
     <img
       class="company-logo"
-      src="https://cloudedata.com/Cloudedata.svg"
+      src="${logoUrl}"
       alt="CloudeData Logo"
     />
+    
 
     <div class="invoice-title">Tax Invoice</div>
   </div>
