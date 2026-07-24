@@ -266,13 +266,7 @@ const sendBillEmailToClient = async (id, userId) => {
     throw new Error("Bill not found");
   }
 
-  if (bill.createdBy.toString() === userId) {
-    throw new Error("Not authorized to send this bill");
-  }
 
-  if (bill.status !== "approved") {
-    throw new Error("Only approved bills can be sent");
-  }
 
   const pdfBuffer = await generatePdf(bill, bill.client);
   await sendBillEmail(bill, bill.client.email, pdfBuffer);

@@ -4,7 +4,6 @@ const path = require("path");
 
 const getLogoBase64 = () => {
   try {
-   
     const logoPath = path.join(__dirname, "../public/Cloudedata.svg");
 
     if (fs.existsSync(logoPath)) {
@@ -13,7 +12,7 @@ const getLogoBase64 = () => {
       return `data:image/svg+xml;base64,${base64Logo}`;
     } else {
       console.warn("Logo file not found at:", logoPath);
-      
+
       return "https://cloudedata.com/Cloudedata.svg";
     }
   } catch (error) {
@@ -228,6 +227,8 @@ const termsAndConditions = [
 const generateHTML = (bill, client) => {
   const logoUrl = getLogoBase64();
   const isPaid = bill.status === "approved";
+  const isProforma = bill.status === "draft";
+
   const baseAmount = parseFloat(bill.amount) || 0;
   const gstAmount = parseFloat(((baseAmount * GST_RATE) / 100).toFixed(2));
   const totalAmount = parseFloat((baseAmount + gstAmount).toFixed(2));
@@ -650,7 +651,7 @@ const generateHTML = (bill, client) => {
     />
     
 
-    <div class="invoice-title">Tax Invoice</div>
+    <div class="invoice-title"> ${isProforma ? "Proforma Invoice" : "Tax Invoice"}</div>
   </div>
 
   <!-- Top grid: Company info + Invoice details -->
@@ -670,7 +671,7 @@ const generateHTML = (bill, client) => {
     <div class="cell border-bottom">
       <div style="margin-bottom:6px;">
         <div class="label-sm">Invoice No.</div>
-        <div class="value-md">${bill.billNumber}</div>
+        <div class="value-md"> ${isProforma ? "Proforma Invoice" : bill.billNumber}</div>
       </div>
       <div style="margin-bottom:6px;">
         <div class="label-sm">Billing Date</div>

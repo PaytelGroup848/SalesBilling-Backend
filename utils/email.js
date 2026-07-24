@@ -68,8 +68,11 @@ const sendBillEmail = async (bill, clientEmail, pdfBuffer) => {
     if (pdfBuffer.length === 0) {
       throw new Error("PDF buffer is empty");
     }
+    const isProforma = bill.status === "draft";
 
-    const subject = `Invoice ${bill.billNumber}`;
+    const subject = isProforma
+      ? "Proforma-Invoice"
+      : `invoice ${bill?.billNumber}`;
 
     // Beautiful HTML email with sky blue theme and Lucide icons
     const htmlContent = `
@@ -78,7 +81,7 @@ const sendBillEmail = async (bill, clientEmail, pdfBuffer) => {
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Invoice ${bill.billNumber}</title>
+          <title>${isProforma ? "Proforma Invoice" : "Tax Invoice"} ${bill.billNumber || ""}</title>
           <!-- Lucide React Icons (using feather icons for email compatibility) -->
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
           <style>
@@ -377,21 +380,33 @@ const sendBillEmail = async (bill, clientEmail, pdfBuffer) => {
               
               <p class="message-text">
                 <i class="fas fa-file-invoice" style="color: #4A90D9; margin-right: 8px;"></i>
-                Please find attached invoice <strong>${bill.billNumber}</strong> for your reference. 
-                We appreciate your business and trust in our services.
+               ${
+                 isProforma
+                   ? `
+      Please find attached the <strong>Proforma Invoice</strong> for your review.
+      This document is issued for quotation and payment purposes only. It is not a Tax Invoice.
+    `
+                   : `
+      Please find attached <strong>Tax Invoice ${bill.billNumber}</strong> for your reference.
+      We appreciate your business and trust in our services.
+    `
+               }
               </p>
               
               <!-- Invoice Details Card -->
              
               <div class="invoice-card">
   <div class="invoice-card-title">
-    <i class="fas fa-receipt"></i> INVOICE DETAILS
+    <i class="fas fa-receipt"></i>
+${isProforma ? "PROFORMA INVOICE DETAILS" : "TAX INVOICE DETAILS"}
   </div>
   <div class="invoice-grid">
     <!-- Row 1: Invoice Number -->
     <div class="invoice-item">
       <span class="label"><i class="fas fa-hashtag"></i> INVOICE NUMBER</span>
-      <span class="value">${bill.billNumber}</span>
+      <span class="value">
+  ${isProforma ? "Proforma Invoice" : bill.billNumber}
+</span>
     </div>
     
     <!-- Row 2: Billing Date -->
@@ -471,7 +486,7 @@ const sendBillEmail = async (bill, clientEmail, pdfBuffer) => {
     const attachment = [
       {
         content: pdfBase64,
-        name: `${bill.billNumber}.pdf`,
+        name: `${isProforma ? "Proforma-Invoice" : bill.billNumber}.pdf`,
         type: "application/pdf",
       },
     ];
