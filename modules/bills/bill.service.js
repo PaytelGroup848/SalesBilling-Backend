@@ -225,8 +225,9 @@ const submitBill = async (id, userId) => {
   return bill.populate("client createdBy approvedBy correctionBy");
 };
 
-const approveBill = async (id, userId) => {
+const approveBill = async (id, userId, billNumber) => {
   const bill = await Bill.findById(id);
+
   if (!bill) {
     throw new Error("Bill not found");
   }
@@ -235,10 +236,30 @@ const approveBill = async (id, userId) => {
     throw new Error("Only pending approval bills can be approved");
   }
 
+  // if accountant changed invoice number
+  if (
+    billNumber &&
+    billNumber.trim() !== "" &&
+    bill.billNumber !== billNumber
+  ) {
+    const exists = await Bill.findOne({
+      billNumber,
+      _id: { $ne: id },
+    });
+
+    if (exists) {
+      throw new Error("Invoice number already exists");
+    }
+
+    bill.billNumber = billNumber;
+  }
+
   bill.status = "approved";
   bill.approvedBy = userId;
   bill.approvedAt = new Date();
+
   await bill.save();
+
   return bill.populate("client createdBy approvedBy correctionBy");
 };
 

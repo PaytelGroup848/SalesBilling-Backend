@@ -1,10 +1,10 @@
-const billService = require('./bill.service');
-const { successResponse, errorResponse } = require('../../utils/apiResponse');
+const billService = require("./bill.service");
+const { successResponse, errorResponse } = require("../../utils/apiResponse");
 
 const createBill = async (req, res) => {
   try {
     const bill = await billService.createBill(req.body, req.user.id);
-    return successResponse(res, bill, 'Bill created successfully', 201);
+    return successResponse(res, bill, "Bill created successfully", 201);
   } catch (error) {
     return errorResponse(res, error.message);
   }
@@ -30,8 +30,12 @@ const getBillById = async (req, res) => {
 
 const updateBill = async (req, res) => {
   try {
-    const bill = await billService.updateBill(req.params.id, req.body, req.user);
-    return successResponse(res, bill, 'Bill updated successfully');
+    const bill = await billService.updateBill(
+      req.params.id,
+      req.body,
+      req.user,
+    );
+    return successResponse(res, bill, "Bill updated successfully");
   } catch (error) {
     return errorResponse(res, error.message);
   }
@@ -40,7 +44,7 @@ const updateBill = async (req, res) => {
 const deleteBill = async (req, res) => {
   try {
     const result = await billService.deleteBill(req.params.id, req.user);
-    return successResponse(res, result, 'Bill deleted successfully');
+    return successResponse(res, result, "Bill deleted successfully");
   } catch (error) {
     return errorResponse(res, error.message);
   }
@@ -49,7 +53,11 @@ const deleteBill = async (req, res) => {
 const submitBill = async (req, res) => {
   try {
     const bill = await billService.submitBill(req.params.id, req.user.id);
-    return successResponse(res, bill, 'Bill submitted for approval successfully');
+    return successResponse(
+      res,
+      bill,
+      "Bill submitted for approval successfully",
+    );
   } catch (error) {
     return errorResponse(res, error.message);
   }
@@ -57,8 +65,13 @@ const submitBill = async (req, res) => {
 
 const approveBill = async (req, res) => {
   try {
-    const bill = await billService.approveBill(req.params.id, req.user.id);
-    return successResponse(res, bill, 'Bill approved successfully');
+    const bill = await billService.approveBill(
+      req.params.id,
+      req.user.id,
+      req.body.billNumber,
+    );
+
+    return successResponse(res, bill, "Bill approved successfully");
   } catch (error) {
     return errorResponse(res, error.message);
   }
@@ -66,8 +79,12 @@ const approveBill = async (req, res) => {
 
 const sendForCorrection = async (req, res) => {
   try {
-    const bill = await billService.sendForCorrection(req.params.id, req.user.id, req.body.reason);
-    return successResponse(res, bill, 'Bill sent for correction successfully');
+    const bill = await billService.sendForCorrection(
+      req.params.id,
+      req.user.id,
+      req.body.reason,
+    );
+    return successResponse(res, bill, "Bill sent for correction successfully");
   } catch (error) {
     return errorResponse(res, error.message);
   }
@@ -75,8 +92,11 @@ const sendForCorrection = async (req, res) => {
 
 const sendBillEmailToClient = async (req, res) => {
   try {
-    const result = await billService.sendBillEmailToClient(req.params.id, req.user.id);
-    return successResponse(res, result, 'Bill email sent successfully');
+    const result = await billService.sendBillEmailToClient(
+      req.params.id,
+      req.user.id,
+    );
+    return successResponse(res, result, "Bill email sent successfully");
   } catch (error) {
     return errorResponse(res, error.message);
   }
