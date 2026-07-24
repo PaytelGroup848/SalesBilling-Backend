@@ -65,6 +65,14 @@ const billSchema = new mongoose.Schema(
     emailSentAt: {
       type: Date,
     },
+    proformaSentAt: {
+      type: Date,
+    },
+
+    proformaSentBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     tallyStatus: {
       type: String,
       enum: ["not_pushed", "pending", "pushed", "failed"],

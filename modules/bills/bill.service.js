@@ -262,18 +262,55 @@ const sendForCorrection = async (id, userId, reason) => {
 
 const sendBillEmailToClient = async (id, userId) => {
   const bill = await Bill.findById(id).populate("client");
+
   if (!bill) {
     throw new Error("Bill not found");
   }
 
+  if (!bill.client?.email) {
+    throw new Error("Client email not found");
+  }
 
+  // Draft -> Proforma Invoice
+  if (bill.status === "draft") {
+    if (bill.proformaSentAt) {
+      throw new Error("Proforma Invoice has already been sent.");
+    }
 
-  const pdfBuffer = await generatePdf(bill, bill.client);
-  await sendBillEmail(bill, bill.client.email, pdfBuffer);
+    const pdfBuffer = await generatePdf(bill, bill.client);
 
-  bill.emailSentAt = new Date();
-  await bill.save();
-  return { message: "Bill email sent successfully" };
+    await sendBillEmail(bill, bill.client.email, pdfBuffer);
+
+    bill.proformaSentAt = new Date();
+    bill.proformaSentBy = userId;
+
+    await bill.save();
+
+    return {
+      message: "Proforma Invoice sent successfully.",
+    };
+  }
+
+  // Approved -> Tax Invoice
+  if (bill.status === "approved") {
+    if (bill.emailSentAt) {
+      throw new Error("Invoice has already been sent.");
+    }
+
+    const pdfBuffer = await generatePdf(bill, bill.client);
+
+    await sendBillEmail(bill, bill.client.email, pdfBuffer);
+
+    bill.emailSentAt = new Date();
+
+    await bill.save();
+
+    return {
+      message: "Invoice sent successfully.",
+    };
+  }
+
+  throw new Error("Only Draft or Approved invoices can be sent.");
 };
 
 module.exports = {

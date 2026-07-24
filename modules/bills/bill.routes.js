@@ -29,7 +29,7 @@ router.post(
 );
 
 router.post(
-  "/:id/tally-push ",
+  "/:id/tally-push",
   authorize(ROLES.ACCOUNTANT),
   billController.approveBill,
 );
