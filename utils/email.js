@@ -1,4 +1,5 @@
 const axios = require("axios");
+const { getRenewalReminderEmail } = require("./emailTemplates");
 
 const sendEmail = async (to, subject, htmlContent, attachment = []) => {
   try {
@@ -502,4 +503,68 @@ ${isProforma ? "PROFORMA INVOICE DETAILS" : "TAX INVOICE DETAILS"}
   }
 };
 
-module.exports = { sendEmail, sendBillEmail };
+const sendRenewalReminder = async (bill, client, daysLeft) => {
+  try {
+    // Validate inputs
+    if (!bill) throw new Error("Bill object is required");
+    if (!client) throw new Error("Client object is required");
+    if (!client.email) throw new Error("Client email is required");
+    if (!daysLeft && daysLeft !== 0) throw new Error("Days left is required");
+
+    const subject = `⚠️ Renewal Reminder: ${bill.service.replace(/_/g, " ")} - ${daysLeft} days left`;
+
+    const htmlContent = getRenewalReminderEmail(bill, client, daysLeft);
+
+    const payload = {
+      sender: {
+        name: "Cloudedata",
+        email: process.env.FROM_EMAIL || "customercare@cloudedata.com",
+      },
+      to: [
+        {
+          email: client.email,
+          name: client.representativeName || "Client",
+        },
+      ],
+      cc: [
+        {
+          email: process.env.FROM_EMAIL || "customercare@cloudedata.com",
+        },
+      ],
+      subject,
+      htmlContent,
+    };
+
+    console.log(
+      `Sending renewal reminder to: ${client.email}, days left: ${daysLeft}`,
+    );
+
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      payload,
+      {
+        headers: {
+          "api-key": process.env.BREVO_API_KEY,
+          "Content-Type": "application/json",
+        },
+        timeout: 30000,
+      },
+    );
+
+    console.log(
+      `✅ Renewal reminder sent to ${client.email}, days left: ${daysLeft}, MessageId: ${response.data.messageId}`,
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error sending renewal reminder:");
+    if (error.response) {
+      console.error("Status:", error.response.status);
+      console.error("Data:", error.response.data);
+    } else {
+      console.error("Error:", error.message);
+    }
+    throw new Error(`Failed to send renewal reminder: ${error.message}`);
+  }
+};
+
+module.exports = { sendEmail, sendBillEmail, sendRenewalReminder };

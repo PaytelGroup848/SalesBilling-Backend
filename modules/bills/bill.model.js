@@ -45,6 +45,24 @@ const billSchema = new mongoose.Schema(
       enum: ["draft", "pending_approval", "approved", "correction"],
       default: "draft",
     },
+    reminderSent: {
+      type: [String], // Array to track which reminders were sent
+      default: []
+    },
+    renewalAlertsStopped: {
+      type: Boolean,
+      default: false
+    },
+    renewalAlertsStoppedAt: {
+      type: Date
+    },
+    clientRenewed: {
+      type: Boolean,
+      default: false
+    },
+    clientRenewedAt: {
+      type: Date
+    },
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -87,5 +105,11 @@ const billSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+billSchema.index({
+  renewalDate: 1,
+  status: 1,
+  createdBy: 1,
+});
 
 module.exports = mongoose.model("Bill", billSchema);

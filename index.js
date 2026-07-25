@@ -13,6 +13,8 @@ const clientRoutes = require("./modules/clients/client.routes");
 const billRoutes = require("./modules/bills/bill.routes");
 const pdfRoutes = require("./modules/pdf/pdf.routes");
 const tallyRoutes = require("./modules/tally/tally.routes");
+const renewalRoutes = require("./modules/bills/bill.renewal.routes");
+const { startRenewalReminderJob } = require("./jobs/renewalReminderJob");
 const app = express();
 
 connectDB();
@@ -36,6 +38,7 @@ app.use("/api/clients", clientRoutes);
 app.use("/api/bills", billRoutes);
 app.use("/api/pdf", pdfRoutes);
 app.use("/api/tally", tallyRoutes);
+app.use("/api/renewals", renewalRoutes);
 
 app.use(errorHandler);
 
@@ -64,4 +67,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   await createDefaultSuperAdmin();
+  startRenewalReminderJob();
+  console.log(" Renewal reminder job started");
 });

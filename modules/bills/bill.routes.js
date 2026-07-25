@@ -40,4 +40,13 @@ router.post(
   billController.sendBillEmailToClient,
 );
 
+router.patch(
+  "/:id/stop-alerts",
+
+  billController.stopRenewalAlerts,
+);
+
+// Get renewal alert status
+router.get("/:id/alert-status", billController.getRenewalAlertStatus);
+
 module.exports = router;
