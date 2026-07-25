@@ -4,6 +4,7 @@ const billController = require("./bill.controller");
 const { auth } = require("../../middleware/auth.middleware");
 const { authorize } = require("../../middleware/role.middleware");
 const { ROLES } = require("../../constants/roles");
+const { getRevenueStats, getRevenueByMonth } = require("./bill.revenue.controller");
 
 router.use(auth);
 
@@ -48,5 +49,17 @@ router.patch(
 
 // Get renewal alert status
 router.get("/:id/alert-status", billController.getRenewalAlertStatus);
+
+router.get(
+  "/revenue/stats",
+
+  getRevenueStats,
+);
+
+router.get(
+  "/revenue/by-month",
+
+  getRevenueByMonth,
+);
 
 module.exports = router;
