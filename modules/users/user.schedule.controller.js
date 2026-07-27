@@ -125,7 +125,7 @@ const updateUserSchedule = async (req, res) => {
   }
 };
 
-// ✅ Only check office hours (MAC check removed)
+//  Only check office hours (MAC check removed)
 const canUserLogin = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -144,7 +144,11 @@ const canUserLogin = async (userId) => {
 
     // Check office hours
     if (user.restrictOutsideHours) {
+      //  Get current time in IST (UTC + 5:30)
       const now = new Date();
+      const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+      const istTime = new Date(now.getTime() + istOffset);
+
       const days = [
         "sunday",
         "monday",
@@ -154,7 +158,7 @@ const canUserLogin = async (userId) => {
         "friday",
         "saturday",
       ];
-      const dayOfWeek = days[now.getDay()];
+      const dayOfWeek = days[istTime.getUTCDay()];
 
       const todaySchedule = user.schedule.find((s) => s.day === dayOfWeek);
 
@@ -166,7 +170,10 @@ const canUserLogin = async (userId) => {
         };
       }
 
-      const currentTime = now.getHours() * 60 + now.getMinutes();
+      //  Calculate current time in minutes (IST)
+      const currentMinutes =
+        istTime.getUTCHours() * 60 + istTime.getUTCMinutes();
+
       const [startHour, startMinute] = todaySchedule.startTime
         .split(":")
         .map(Number);
@@ -174,7 +181,7 @@ const canUserLogin = async (userId) => {
       const startTime = startHour * 60 + startMinute;
       const endTime = endHour * 60 + endMinute;
 
-      if (currentTime < startTime || currentTime > endTime) {
+      if (currentMinutes < startTime || currentMinutes > endTime) {
         return {
           allowed: false,
           reason: `Office hours are ${todaySchedule.startTime} to ${todaySchedule.endTime} IST`,
