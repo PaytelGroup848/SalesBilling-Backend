@@ -7,6 +7,19 @@ const { ROLES } = require("../../constants/roles");
 
 router.use(auth);
 
+router.get(
+  "/without-bills",
+
+  clientController.getClientsWithoutBills,
+);
+
+router.get(
+  "/:id/bill-status",
+
+  authorize([ROLES.SUPERADMIN, ROLES.ACCOUNTANT, ROLES.SALES]),
+  clientController.getClientBillStatus,
+);
+
 router.post("/", authorize(ROLES.SALES), clientController.createClient);
 router.get("/", clientController.getClients);
 router.get("/:id", clientController.getClientById);
