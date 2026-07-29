@@ -3,29 +3,31 @@ const jwt = require("jsonwebtoken");
 const { canUserLogin } = require("../users/user.schedule.controller");
 
 const login = async (email, password) => {
-  // Find user (including inactive ones to give proper message)
+  console.log("Auth Service - Login attempt:", email);
+
   const user = await User.findOne({ email });
+  console.log("Auth Service - User found:", user ? "Yes" : "No");
 
   if (!user) {
     throw new Error("Invalid credentials");
   }
 
-  // Check if user is active
   if (!user.isActive) {
     throw new Error("Your account has been deactivated. Please contact admin.");
   }
 
-  // Check password
   const isMatch = await user.comparePassword(password);
+  console.log("Auth Service - Password match:", isMatch ? "Yes" : "No");
+
   if (!isMatch) {
     throw new Error("Invalid credentials");
   }
 
-  if (user.role !== "superadmin") {
+  // ✅ Skip schedule check for Super Admin and Server Admin
+  if (user.role !== "superadmin" && user.role !== "server_admin") {
     const loginCheck = await canUserLogin(user._id);
 
     if (!loginCheck.allowed) {
-      // Throw error with code for controller to handle
       const error = new Error(loginCheck.reason);
       error.code = loginCheck.code;
       error.statusCode = 403;
@@ -33,7 +35,6 @@ const login = async (email, password) => {
     }
   }
 
-  // Generate token
   const token = jwt.sign(
     { id: user._id, email: user.email, role: user.role },
     process.env.JWT_SECRET,

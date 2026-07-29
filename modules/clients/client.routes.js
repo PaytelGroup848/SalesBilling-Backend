@@ -16,7 +16,7 @@ router.get(
 router.get(
   "/:id/bill-status",
 
-  authorize([ROLES.SUPERADMIN, ROLES.ACCOUNTANT, ROLES.SALES]),
+  authorize(ROLES.SUPERADMIN, ROLES.ACCOUNTANT, ROLES.SALES),
   clientController.getClientBillStatus,
 );
 

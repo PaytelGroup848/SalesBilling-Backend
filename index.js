@@ -15,6 +15,8 @@ const pdfRoutes = require("./modules/pdf/pdf.routes");
 // const tallyRoutes = require("./modules/tally/tally.routes");
 const renewalRoutes = require("./modules/bills/bill.renewal.routes");
 const { startRenewalReminderJob } = require("./jobs/renewalReminderJob");
+const serverRoutes = require("./modules/servers/server.routes");
+const serverAssignmentRoutes = require("./modules/server-assignments/serverAssignment.routes");
 const app = express();
 
 connectDB();
@@ -22,8 +24,9 @@ connectDB();
 app.use(
   cors({
     origin: [
-      "http://localhost:5174",
+      // "http://localhost:5174",
       "http://localhost:5173",
+      "http://localhost:3000",
       "https://billings.cloudedata.com",
     ],
     credentials: true,
@@ -39,6 +42,9 @@ app.use("/api/bills", billRoutes);
 app.use("/api/pdf", pdfRoutes);
 // app.use("/api/tally", tallyRoutes);
 app.use("/api/renewals", renewalRoutes);
+
+app.use("/api/servers", serverRoutes);
+app.use("/api/server-assignments", serverAssignmentRoutes);
 
 app.use(errorHandler);
 
@@ -62,11 +68,38 @@ const createDefaultSuperAdmin = async () => {
   }
 };
 
+const createDefaultServerAdmin = async () => {
+  try {
+    const existingServerAdmin = await User.findOne({
+      email: "serveradmin@cloudedata.com",
+    });
+    if (!existingServerAdmin) {
+      //  Don't hash here - let the model's pre('save') middleware handle it
+      const serverAdmin = new User({
+        name: "Server Administrator",
+        email: "serveradmin@cloudedata.com",
+        password: "ServerAdmin@123", // Plain password - model will hash it
+        role: "server_admin",
+        isActive: true,
+      });
+      await serverAdmin.save();
+      console.log(
+        "Server Admin created with email: serveradmin@cloudedata.com",
+      );
+    } else {
+      console.log(" Server Admin already exists");
+    }
+  } catch (error) {
+    console.error("Error creating default serveradmin:", error.message);
+  }
+};
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   await createDefaultSuperAdmin();
+  await createDefaultServerAdmin();
   startRenewalReminderJob();
   console.log(" Renewal reminder job started");
 });
