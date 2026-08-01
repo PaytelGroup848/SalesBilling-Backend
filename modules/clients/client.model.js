@@ -4,21 +4,21 @@ const clientSchema = new mongoose.Schema(
   {
     representativeName: {
       type: String,
-      required: true,
+      // required: true,
     },
     companyName: {
       type: String,
     },
     phone: {
       type: String,
-      required: true,
+      // required: true,
     },
     address: {
       type: String,
     },
     email: {
       type: String,
-      required: true,
+      // required: true,
       lowercase: true,
     },
     gstNumber: {
