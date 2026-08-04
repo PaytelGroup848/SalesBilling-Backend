@@ -1,5 +1,6 @@
 const Bill = require("./bill.model");
 const Client = require("../clients/client.model");
+const User = require("../users/user.model");
 const { ROLES } = require("../../constants/roles");
 const { generatePdf } = require("../../utils/pdfGenerator");
 const { sendBillEmail } = require("../../utils/email");
@@ -61,11 +62,14 @@ const getBills = async (query, user) => {
     renewalStartDate,
     renewalEndDate,
     renewalFilter, // 'today', 'this_week', 'this_month'
+    salesPerson,
   } = query;
   const filter = {};
 
   if (user.role === ROLES.SALES) {
     filter.createdBy = user.id;
+  } else if (salesPerson) {
+    filter.createdBy = salesPerson;
   } else if (user.role === ROLES.ACCOUNTANT) {
     filter.status = { $in: ["pending_approval", "approved", "correction"] };
   }
@@ -145,11 +149,17 @@ const getBills = async (query, user) => {
     .limit(limit * 1)
     .skip((page - 1) * limit);
 
+  const salesPersons = await User.find(
+    { role: ROLES.SALES },
+    "name email"
+  );
+
   return {
     bills,
     total,
     page: parseInt(page),
     totalPages: Math.ceil(total / limit),
+    salesPersons,
   };
 };
 

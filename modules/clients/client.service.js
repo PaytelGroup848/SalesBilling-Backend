@@ -1,4 +1,5 @@
 const Client = require('./client.model');
+const User = require('../users/user.model');
 const { ROLES } = require('../../constants/roles');
 
 const createClient = async (clientData, userId) => {
@@ -11,11 +12,13 @@ const createClient = async (clientData, userId) => {
 };
 
 const getClients = async (query, user) => {
-  const { page = 1, limit = 10, search } = query;
+  const { page = 1, limit = 10, search, salesPerson } = query;
   const filter = {};
 
   if (user.role === ROLES.SALES) {
     filter.createdBy = user.id;
+  } else if (salesPerson) {
+    filter.createdBy = salesPerson;
   }
 
   if (search) {
@@ -34,11 +37,17 @@ const getClients = async (query, user) => {
     .limit(limit * 1)
     .skip((page - 1) * limit);
 
+  const salesPersons = await User.find(
+    { role: ROLES.SALES },
+    'name email'
+  );
+
   return {
     clients,
     total,
     page: parseInt(page),
     totalPages: Math.ceil(total / limit),
+    salesPersons,
   };
 };
 
