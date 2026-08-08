@@ -1,5 +1,6 @@
 const Client = require('./client.model');
 const User = require('../users/user.model');
+const Bill = require('../bills/bill.model');
 const { ROLES } = require('../../constants/roles');
 
 const createClient = async (clientData, userId) => {
@@ -42,8 +43,24 @@ const getClients = async (query, user) => {
     'name email'
   );
 
+  const clientIds = clients.map((c) => c._id);
+  const billCounts = await Bill.aggregate([
+    { $match: { client: { $in: clientIds } } },
+    { $group: { _id: '$client', count: { $sum: 1 } } },
+  ]);
+  const billCountMap = {};
+  billCounts.forEach((bc) => {
+    billCountMap[bc._id.toString()] = bc.count;
+  });
+
+  const clientsWithBillCount = clients.map((client) => ({
+    ...client.toObject(),
+    billCount: billCountMap[client._id.toString()] || 0,
+    salesRepName: client.createdBy?.name || client.salesRepName || 'N/A',
+  }));
+
   return {
-    clients,
+    clients: clientsWithBillCount,
     total,
     page: parseInt(page),
     totalPages: Math.ceil(total / limit),

@@ -80,11 +80,19 @@ const getAllUpcomingRenewals = async (req, res) => {
       "name email",
     );
 
+    // Get clients with 2+ bills for highlighting
+    const allClientBillCounts = await Bill.aggregate([
+      { $group: { _id: '$client', count: { $sum: 1 } } },
+      { $match: { count: { $gte: 2 } } },
+    ]);
+    const clientsWithMultipleBills = allClientBillCounts.map((c) => c._id.toString());
+
     res.json({
       success: true,
       count: renewals.length,
       renewals,
       salesPersons,
+      clientsWithMultipleBills,
     });
   } catch (error) {
     res.status(500).json({

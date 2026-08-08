@@ -154,12 +154,19 @@ const getBills = async (query, user) => {
     "name email"
   );
 
+  const allClientBillCounts = await Bill.aggregate([
+    { $group: { _id: '$client', count: { $sum: 1 } } },
+    { $match: { count: { $gte: 2 } } },
+  ]);
+  const clientsWithMultipleBills = allClientBillCounts.map((c) => c._id.toString());
+
   return {
     bills,
     total,
     page: parseInt(page),
     totalPages: Math.ceil(total / limit),
     salesPersons,
+    clientsWithMultipleBills,
   };
 };
 
