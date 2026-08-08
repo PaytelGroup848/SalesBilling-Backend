@@ -4,7 +4,10 @@ const billController = require("./bill.controller");
 const { auth } = require("../../middleware/auth.middleware");
 const { authorize } = require("../../middleware/role.middleware");
 const { ROLES } = require("../../constants/roles");
-const { getRevenueStats, getRevenueByMonth } = require("./bill.revenue.controller");
+const {
+  getRevenueStats,
+  getRevenueByMonth,
+} = require("./bill.revenue.controller");
 
 router.use(auth);
 
@@ -61,5 +64,7 @@ router.get(
 
   getRevenueByMonth,
 );
+
+router.get("/export/excel", billController.exportBillsExcel);
 
 module.exports = router;

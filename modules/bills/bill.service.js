@@ -62,6 +62,9 @@ const getBills = async (query, user) => {
     renewalStartDate,
     renewalEndDate,
     renewalFilter, // 'today', 'this_week', 'this_month'
+    billingDateFilter,
+    billingStartDate,
+    billingEndDate,
     salesPerson,
   } = query;
   const filter = {};
@@ -100,6 +103,43 @@ const getBills = async (query, user) => {
     filter.billingDate = {};
     if (startDate) filter.billingDate.$gte = new Date(startDate);
     if (endDate) filter.billingDate.$lte = new Date(endDate);
+  }
+
+  // Billing date filters (NEW)
+  if (billingStartDate || billingEndDate) {
+    filter.billingDate = filter.billingDate || {};
+    if (billingStartDate) filter.billingDate.$gte = new Date(billingStartDate);
+    if (billingEndDate) filter.billingDate.$lte = new Date(billingEndDate);
+  } else if (billingDateFilter) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    if (billingDateFilter === "today") {
+      filter.billingDate = {
+        $gte: today,
+        $lt: tomorrow,
+      };
+    } else if (billingDateFilter === "this_week") {
+      const weekStart = new Date(today);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+
+      filter.billingDate = {
+        $gte: weekStart,
+        $lt: weekEnd,
+      };
+    } else if (billingDateFilter === "this_month") {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+      filter.billingDate = {
+        $gte: monthStart,
+        $lt: monthEnd,
+      };
+    }
   }
 
   // Renewal date filters

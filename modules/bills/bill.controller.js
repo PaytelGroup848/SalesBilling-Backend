@@ -1,6 +1,8 @@
 const billService = require("./bill.service");
 const { successResponse, errorResponse } = require("../../utils/apiResponse");
 const billModel = require("./bill.model");
+const xlsx = require("xlsx");
+const { exportBillsToExcel } = require("../../utils/excelExporter");
 
 const createBill = async (req, res) => {
   try {
@@ -195,6 +197,121 @@ const getRenewalAlertStatus = async (req, res) => {
   }
 };
 
+const exportBillsExcel = async (req, res) => {
+  try {
+    const user = req.user;
+    const {
+      search,
+      status,
+      service,
+      salesPerson,
+      renewalFilter,
+      renewalStartDate,
+      renewalEndDate,
+    } = req.query;
+
+    // Build filter (same as getBills)
+    const filter = {};
+
+    if (user.role === "sales") {
+      filter.createdBy = user.id;
+    } else if (user.role === "accountant") {
+      filter.status = { $in: ["pending_approval", "approved", "correction"] };
+    }
+
+    if (search) {
+      const clientIds = await require("../clients/client.model")
+        .find({
+          $or: [
+            { companyName: { $regex: search, $options: "i" } },
+            { representativeName: { $regex: search, $options: "i" } },
+          ],
+        })
+        .distinct("_id");
+
+      filter.$or = [
+        { billNumber: { $regex: search, $options: "i" } },
+        { client: { $in: clientIds } },
+      ];
+    }
+
+    if (status) filter.status = status;
+    if (service) filter.service = service;
+    if (salesPerson) filter.createdBy = salesPerson;
+
+    // Renewal date filters
+    if (renewalStartDate || renewalEndDate) {
+      filter.renewalDate = {};
+      if (renewalStartDate)
+        filter.renewalDate.$gte = new Date(renewalStartDate);
+      if (renewalEndDate) filter.renewalDate.$lte = new Date(renewalEndDate);
+    } else if (renewalFilter) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      if (renewalFilter === "today") {
+        filter.renewalDate = { $gte: today, $lt: tomorrow };
+      } else if (renewalFilter === "this_week") {
+        const weekStart = new Date(today);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        filter.renewalDate = { $gte: weekStart, $lt: weekEnd };
+      } else if (renewalFilter === "this_month") {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        filter.renewalDate = { $gte: monthStart, $lt: monthEnd };
+      }
+    }
+
+    // Get all bills matching filter (no pagination)
+    const bills = await require("./bill.model")
+      .find(filter)
+      .populate("client", "companyName representativeName")
+      .populate("createdBy", "name email")
+      .populate("approvedBy", "name")
+      .sort({ createdAt: -1 });
+
+    if (bills.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No bills found for export",
+      });
+    }
+
+    // Generate Excel
+    const workbook = exportBillsToExcel(bills);
+
+    // Generate filename with date and filter info
+    const dateStr = new Date().toISOString().split("T")[0];
+    let filename = `Bills_Export_${dateStr}`;
+
+    if (status) filename += `_${status}`;
+    if (service) filename += `_${service}`;
+    if (renewalFilter) filename += `_${renewalFilter}`;
+
+    filename += ".xlsx";
+
+    // Write buffer
+    const buffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(buffer);
+  } catch (error) {
+    console.error("Export Excel error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createBill,
   getBills,
@@ -207,4 +324,5 @@ module.exports = {
   sendBillEmailToClient,
   stopRenewalAlerts,
   getRenewalAlertStatus,
+  exportBillsExcel,
 };
