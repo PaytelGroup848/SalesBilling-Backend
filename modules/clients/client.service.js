@@ -14,7 +14,10 @@ const createClient = async (clientData, userId) => {
 
 const getClients = async (query, user) => {
   const { page = 1, limit = 10, search, salesPerson } = query;
-  const filter = {};
+
+  const filter = {
+    email: { $exists: true, $nin: ["", null] },
+  };
 
   if (user.role === ROLES.SALES) {
     filter.createdBy = user.id;
@@ -24,31 +27,32 @@ const getClients = async (query, user) => {
 
   if (search) {
     filter.$or = [
-      { companyName: { $regex: search, $options: 'i' } },
-      { phone: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
-      { representativeName: { $regex: search, $options: 'i' } },
+      { companyName: { $regex: search, $options: "i" } },
+      { phone: { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } },
+      { representativeName: { $regex: search, $options: "i" } },
     ];
   }
 
   const total = await Client.countDocuments(filter);
+
   const clients = await Client.find(filter)
-    .populate('createdBy', 'name email')
+    .populate("createdBy", "name email")
     .sort({ createdAt: -1 })
     .limit(limit * 1)
     .skip((page - 1) * limit);
 
-  const salesPersons = await User.find(
-    { role: ROLES.SALES },
-    'name email'
-  );
+  const salesPersons = await User.find({ role: ROLES.SALES }, "name email");
 
   const clientIds = clients.map((c) => c._id);
+
   const billCounts = await Bill.aggregate([
     { $match: { client: { $in: clientIds } } },
-    { $group: { _id: '$client', count: { $sum: 1 } } },
+    { $group: { _id: "$client", count: { $sum: 1 } } },
   ]);
+
   const billCountMap = {};
+
   billCounts.forEach((bc) => {
     billCountMap[bc._id.toString()] = bc.count;
   });
@@ -56,7 +60,7 @@ const getClients = async (query, user) => {
   const clientsWithBillCount = clients.map((client) => ({
     ...client.toObject(),
     billCount: billCountMap[client._id.toString()] || 0,
-    salesRepName: client.createdBy?.name || client.salesRepName || 'N/A',
+    salesRepName: client.createdBy?.name || client.salesRepName || "N/A",
   }));
 
   return {

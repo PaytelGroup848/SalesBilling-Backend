@@ -58,13 +58,11 @@ const getClientsWithoutBills = async (req, res) => {
     let filter = {};
 
     const allClients = await clientModel
-      .find(filter)
+      .find({
+        ...filter,
+        email: { $exists: true, $nin: ["", null] },
+      })
       .populate("createdBy", "name email");
-
-    const bills = await Bill.find({}, "client");
-    const clientIdsWithBills = new Set(
-      bills.map((bill) => bill.client.toString()),
-    );
 
     const clientsWithoutBills = allClients.filter(
       (client) => !clientIdsWithBills.has(client._id.toString()),
