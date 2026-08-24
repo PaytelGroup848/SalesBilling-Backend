@@ -68,11 +68,9 @@ const serverAssignmentSchema = new mongoose.Schema({
   // Validity
   validityStart: {
     type: Date,
-    required: true,
   },
   validityEnd: {
     type: Date,
-    required: true,
   },
   status: {
     type: String,
