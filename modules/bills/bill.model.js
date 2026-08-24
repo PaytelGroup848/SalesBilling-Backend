@@ -63,6 +63,17 @@ const billSchema = new mongoose.Schema(
     clientRenewedAt: {
       type: Date
     },
+    renewed: {
+      type: Boolean,
+      default: false
+    },
+    renewedAt: {
+      type: Date
+    },
+    parentBill: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Bill"
+    },
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

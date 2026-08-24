@@ -44,9 +44,24 @@ const createBill = async (billData, userId) => {
     renewalDate: billData.renewalDate,
     amount: billData.amount,
     status: "draft",
+    parentBill: billData.parentBillId || undefined,
   });
 
   await bill.save();
+
+  if (billData.parentBillId) {
+    await Bill.findByIdAndUpdate(
+      billData.parentBillId,
+      {
+        $set: {
+          renewed: true,
+          renewedAt: new Date(),
+        },
+      },
+      { new: true },
+    );
+  }
+
   return bill.populate("client createdBy approvedBy correctionBy");
 };
 
