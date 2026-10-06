@@ -51,13 +51,13 @@ const companyInfo = {
 // HSN codes per service
 const SERVICE_HSN = {
   ERP_ON_CLOUD: "998315",
-  RMS: "998315",
+  CTRLBOOKS: "998315",
   FAIRWOOD: "998315",
 };
 
 const SERVICE_NAMES = {
   ERP_ON_CLOUD: "ERP On Cloud",
-  RMS: "RMS (Restaurant Management System)",
+  CTRLBOOKS: "CTRLBOOKS",
   FAIRWOOD: "Fairwood",
 };
 

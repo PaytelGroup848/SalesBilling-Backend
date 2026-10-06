@@ -19,7 +19,7 @@ const billSchema = new mongoose.Schema(
     },
     service: {
       type: String,
-      enum: ["ERP_ON_CLOUD", "RMS", "FAIRWOOD"],
+      enum: ["ERP_ON_CLOUD", "CTRLBOOKS", "FAIRWOOD"],
       required: true,
     },
     specifications: [
