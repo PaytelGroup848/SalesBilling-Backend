@@ -37,6 +37,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/users", require('./modules/users/transfer.routes'));
 app.use("/api/clients", clientRoutes);
 app.use("/api/bills", billRoutes);
 app.use("/api/pdf", pdfRoutes);
