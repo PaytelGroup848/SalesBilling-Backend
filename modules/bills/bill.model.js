@@ -111,6 +111,10 @@ const billSchema = new mongoose.Schema(
     tallyConfirmedAt: { type: Date },
     tallyError: { type: String },
     tallyVoucherId: { type: String },
+    isLost: { type: Boolean, default: false },
+    lostReason: { type: String, default: '' },
+    lostMarkedAt: { type: Date },
+    lostMarkedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   {
     timestamps: true,

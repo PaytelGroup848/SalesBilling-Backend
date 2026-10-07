@@ -45,6 +45,7 @@ app.use("/api/renewals", renewalRoutes);
 
 app.use("/api/servers", serverRoutes);
 app.use("/api/server-assignments", serverAssignmentRoutes);
+app.use('/api/lost', require('./modules/lost/lost.routes'));
 
 app.use(errorHandler);
 
