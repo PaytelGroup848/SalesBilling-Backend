@@ -5,22 +5,38 @@ const { ROLES } = require("../../constants/roles");
 const { generatePdf } = require("../../utils/pdfGenerator");
 const { sendBillEmail } = require("../../utils/email");
 
+
+const INVOICE_PREFIX = "PFTPL";
+const INVOICE_START_NUMBER = 450; 
+
+
+const getFinancialYear = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = date.getMonth(); // 0 = January
+  const startYear = month >= 3 ? year : year - 1;
+  return `${String(startYear).slice(-2)}-${String(startYear + 1).slice(-2)}`;
+};
+
 const generateBillNumber = async () => {
-  const currentYear = new Date().getFullYear();
+  const financialYear = getFinancialYear();
+  const prefix = `${INVOICE_PREFIX}/${financialYear}/`;
 
-  const lastTwoDigitOfCurrentYear = String(currentYear).slice(-2);
 
-  const prefix = `CLOUDE-${lastTwoDigitOfCurrentYear}-`;
-
-  const latestBill = await Bill.findOne({
+  const bills = await Bill.find({
     billNumber: { $regex: `^${prefix}` },
-  }).sort({ billNumber: -1 });
+  }).select("billNumber");
 
-  let nextNumber = 1;
-  if (latestBill) {
-    const latestNumber = parseInt(latestBill.billNumber.split("-")[2]);
-    nextNumber = latestNumber + 1;
+  let maxNumber = 0;
+
+  for (const b of bills) {
+    const num = parseInt(b.billNumber.split("/")[2], 10);
+    if (!Number.isNaN(num) && num > maxNumber) {
+      maxNumber = num;
+    }
   }
+
+
+  const nextNumber = Math.max(INVOICE_START_NUMBER, maxNumber + 1);
 
   return `${prefix}${String(nextNumber).padStart(4, "0")}`;
 };
@@ -81,8 +97,13 @@ const getBills = async (query, user) => {
     billingStartDate,
     billingEndDate,
     salesPerson,
+    client,
   } = query;
   const filter = {};
+
+  if (client) {
+    filter.client = client;
+  }
 
   if (user.role === ROLES.SALES) {
     filter.createdBy = user.id;
