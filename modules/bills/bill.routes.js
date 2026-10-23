@@ -15,6 +15,7 @@ router.post("/", authorize(ROLES.SALES), billController.createBill);
 router.get("/", billController.getBills);
 router.get("/:id", billController.getBillById);
 router.put("/:id", billController.updateBill);
+router.patch("/:id/remark", billController.updateRemark);
 router.delete(
   "/:id",
   authorize(ROLES.SALES, ROLES.SUPERADMIN),

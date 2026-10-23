@@ -53,17 +53,22 @@ const deleteClient = async (req, res) => {
 
 const getClientsWithoutBills = async (req, res) => {
   try {
-    const user = req.user;
-
-    let filter = {};
-
+    // Get clients that have an email
     const allClients = await clientModel
       .find({
-        ...filter,
         email: { $exists: true, $nin: ["", null] },
       })
-      .populate("createdBy", "name email");
+      .populate("createdBy", "name email")
+      .lean();
 
+    // Get all client IDs that have at least one bill
+    const clientsWithBillsData = await Bill.distinct("client");
+
+    const clientIdsWithBills = new Set(
+      clientsWithBillsData.filter(Boolean).map((id) => id.toString()),
+    );
+
+    // Filter clients that do not have any bills
     const clientsWithoutBills = allClients.filter(
       (client) => !clientIdsWithBills.has(client._id.toString()),
     );
@@ -71,7 +76,12 @@ const getClientsWithoutBills = async (req, res) => {
     const totalClients = allClients.length;
     const clientsWithBills = totalClients - clientsWithoutBills.length;
 
-    res.json({
+    const percentageWithoutBills =
+      totalClients > 0
+        ? ((clientsWithoutBills.length / totalClients) * 100).toFixed(2)
+        : "0.00";
+
+    return res.json({
       success: true,
       data: {
         clients: clientsWithoutBills,
@@ -79,16 +89,14 @@ const getClientsWithoutBills = async (req, res) => {
           totalClients,
           clientsWithBills,
           clientsWithoutBills: clientsWithoutBills.length,
-          percentageWithoutBills: (
-            (clientsWithoutBills.length / totalClients) *
-            100
-          ).toFixed(2),
+          percentageWithoutBills,
         },
       },
     });
   } catch (error) {
     console.error("Error getting clients without bills:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       success: false,
       message: error.message,
     });
@@ -99,10 +107,9 @@ const getClientBillStatus = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const client = await Client.findById(id).populate(
-      "createdBy",
-      "name email",
-    );
+    const client = await clientModel
+      .findById(id)
+      .populate("createdBy", "name email");
 
     if (!client) {
       return res.status(404).json({
@@ -111,21 +118,29 @@ const getClientBillStatus = async (req, res) => {
       });
     }
 
-    const bills = await Bill.find({ client: id }).sort({ createdAt: -1 });
+    const bills = await Bill.find({ client: id }).sort({
+      createdAt: -1,
+    });
 
-    res.json({
+    const totalAmount = bills.reduce(
+      (sum, bill) => sum + (Number(bill.amount) || 0),
+      0,
+    );
+
+    return res.json({
       success: true,
       data: {
         client,
         bills,
         hasBills: bills.length > 0,
         totalBills: bills.length,
-        totalAmount: bills.reduce((sum, bill) => sum + (bill.amount || 0), 0),
+        totalAmount,
       },
     });
   } catch (error) {
     console.error("Error getting client bill status:", error);
-    res.status(500).json({
+
+    return res.status(500).json({
       success: false,
       message: error.message,
     });

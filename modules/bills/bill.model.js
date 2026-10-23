@@ -40,6 +40,14 @@ const billSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    remark: {
+      type: String,
+      default: "",
+    },
+    accountantRemark: {
+      type: String,
+      default: "",
+    },
     status: {
       type: String,
       enum: ["draft", "pending_approval", "approved", "correction"],

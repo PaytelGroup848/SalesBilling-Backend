@@ -62,6 +62,20 @@ const SERVICE_NAMES = {
 };
 
 const GST_RATE = 18; // 18% GST
+const CGST_RATE = GST_RATE / 2; // 9%
+const SGST_RATE = GST_RATE / 2; // 9%
+const SELLER_STATE_CODE = "07"; // Delhi (seller state)
+
+// Tax type based on client's state code:
+// - empty  -> no GST
+// - "07"   -> CGST + SGST (intra-state)
+// - others -> IGST (inter-state)
+const getTaxType = (client) => {
+  const code = String(client?.stateCode || "").trim();
+  if (!code) return "none";
+  if (code === SELLER_STATE_CODE) return "cgst_sgst";
+  return "igst";
+};
 
 // ---------- Number to Words (Indian system) ----------
 const numberToWords = (num) => {
@@ -230,10 +244,157 @@ const generateHTML = (bill, client) => {
   const isProforma = bill.status === "draft";
 
   const baseAmount = parseFloat(bill.amount) || 0;
-  const gstAmount = parseFloat(((baseAmount * GST_RATE) / 100).toFixed(2));
+  const taxType = getTaxType(client);
+
+  const gstAmount =
+    taxType === "none"
+      ? 0
+      : parseFloat(((baseAmount * GST_RATE) / 100).toFixed(2));
+  const cgstAmount =
+    taxType === "cgst_sgst"
+      ? parseFloat(((baseAmount * CGST_RATE) / 100).toFixed(2))
+      : 0;
+  const sgstAmount =
+    taxType === "cgst_sgst"
+      ? parseFloat(((baseAmount * SGST_RATE) / 100).toFixed(2))
+      : 0;
+  const igstAmount = taxType === "igst" ? gstAmount : 0;
   const totalAmount = parseFloat((baseAmount + gstAmount).toFixed(2));
+
+  const gstRateLabel =
+    taxType === "none"
+      ? "0%"
+      : taxType === "cgst_sgst"
+        ? `${CGST_RATE}%+${SGST_RATE}%`
+        : `${GST_RATE}%`;
+
   const hsnCode = SERVICE_HSN[bill.service] || "998315";
   const serviceName = SERVICE_NAMES[bill.service] || bill.service;
+
+  // ---- Tax rows (inside the items table) ----
+  const makeTaxRow = (label, rate, amount) => `
+      <tr>
+        <td style="border-left:1px solid #aaa;border-right:1px solid #aaa;border-top:1px solid #aaa;"></td>
+        <td style="border-right:1px solid #aaa;border-top:1px solid #aaa;padding:5px 6px;text-align:right;font-size:10.5px;color:#333;">
+          ${label}
+        </td>
+        <td style="border-right:1px solid #aaa;border-top:1px solid #aaa;"></td>
+        <td style="border-right:1px solid #aaa;border-top:1px solid #aaa;"></td>
+        <td style="border-right:1px solid #aaa;border-top:1px solid #aaa;padding:5px 6px;text-align:center;font-size:10.5px;">${rate}</td>
+        <td style="border-right:1px solid #aaa;border-top:1px solid #aaa;padding:5px 6px;text-align:center;font-size:10.5px;">%</td>
+        <td style="border-right:1px solid #aaa;border-top:1px solid #aaa;padding:5px 6px;text-align:right;font-size:10.5px;">${formatINR(amount)}</td>
+      </tr>`;
+
+  let taxRowsHTML = "";
+  if (taxType === "igst") {
+    taxRowsHTML = makeTaxRow(
+      `IGST Output-${GST_RATE}% (${companyInfo.stateName})`,
+      GST_RATE,
+      igstAmount,
+    );
+  } else if (taxType === "cgst_sgst") {
+    taxRowsHTML =
+      makeTaxRow(
+        `CGST Output-${CGST_RATE}% (${companyInfo.stateName})`,
+        CGST_RATE,
+        cgstAmount,
+      ) +
+      makeTaxRow(
+        `SGST Output-${SGST_RATE}% (${companyInfo.stateName})`,
+        SGST_RATE,
+        sgstAmount,
+      );
+  }
+
+  // ---- GST / Tax breakup table ----
+  let taxBreakupTableHTML = "";
+  if (taxType === "none") {
+    taxBreakupTableHTML = `
+  <table class="tax-table">
+    <thead>
+      <tr>
+        <th>HSN/SAC</th>
+        <th>Taxable Value (₹)</th>
+        <th>Total Amount (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>${hsnCode}</td>
+        <td>${formatINR(baseAmount)}</td>
+        <td><strong>${formatINR(totalAmount)}</strong></td>
+      </tr>
+    </tbody>
+  </table>`;
+  } else if (taxType === "cgst_sgst") {
+    taxBreakupTableHTML = `
+  <table class="tax-table">
+    <thead>
+      <tr>
+        <th>HSN/SAC</th>
+        <th>Taxable Value (₹)</th>
+        <th>CGST Rate</th>
+        <th>CGST Amount (₹)</th>
+        <th>SGST Rate</th>
+        <th>SGST Amount (₹)</th>
+        <th>Total Amount (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>${hsnCode}</td>
+        <td>${formatINR(baseAmount)}</td>
+        <td>${CGST_RATE}%</td>
+        <td>${formatINR(cgstAmount)}</td>
+        <td>${SGST_RATE}%</td>
+        <td>${formatINR(sgstAmount)}</td>
+        <td><strong>${formatINR(totalAmount)}</strong></td>
+      </tr>
+    </tbody>
+  </table>`;
+  } else {
+    taxBreakupTableHTML = `
+  <table class="tax-table">
+    <thead>
+      <tr>
+        <th>HSN/SAC</th>
+        <th>Taxable Value (₹)</th>
+        <th>IGST Rate</th>
+        <th>IGST Amount (₹)</th>
+        <th>Total Amount (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>${hsnCode}</td>
+        <td>${formatINR(baseAmount)}</td>
+        <td>${GST_RATE}%</td>
+        <td>${formatINR(igstAmount)}</td>
+        <td><strong>${formatINR(totalAmount)}</strong></td>
+      </tr>
+    </tbody>
+  </table>`;
+  }
+
+  // ---- Amount breakup rows ----
+  let taxAmountRowsHTML = "";
+  if (taxType === "igst") {
+    taxAmountRowsHTML = `
+    <div class="amount-row">
+      <span>IGST @ ${GST_RATE}%</span>
+      <span>₹ ${formatINR(igstAmount)}</span>
+    </div>`;
+  } else if (taxType === "cgst_sgst") {
+    taxAmountRowsHTML = `
+    <div class="amount-row">
+      <span>CGST @ ${CGST_RATE}%</span>
+      <span>₹ ${formatINR(cgstAmount)}</span>
+    </div>
+    <div class="amount-row">
+      <span>SGST @ ${SGST_RATE}%</span>
+      <span>₹ ${formatINR(sgstAmount)}</span>
+    </div>`;
+  }
 
   // Build specs rows — exclude Amount, Billing date, Renewal date from table (shown separately)
   const excludedKeys = [
@@ -696,7 +857,10 @@ const generateHTML = (bill, client) => {
     ${client.phone ? `<div>Phone: ${client.phone}</div>` : ""}
     ${client.email ? `<div>Email: ${client.email}</div>` : ""}
     ${client.gstNumber ? `<div>GSTIN: <strong>${client.gstNumber}</strong></div>` : ""}
-    ${client.address ? `<div>Address: ${client.address}</div>` : ""}
+      ${client.state ? `<div>State: ${client?.state} | Code: ${client?.stateCode}</div>` : ""}
+          ${client.address ? `<div>Address: ${client.address}</div>` : ""}
+      ${client.country ? `<div>Country: <strong>${client.country}</strong></div>` : ""}
+
   </div>
 
   <!-- Specifications Table -->
@@ -722,7 +886,7 @@ const generateHTML = (bill, client) => {
           <div style="font-weight:700;font-size:11px;">${serviceName}</div>
           <div style="font-size:10px;color:#555;">From ${new Date(bill.billingDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })} to ${new Date(bill.renewalDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}</div>
         </td>
-        <td style="border-right:1px solid #aaa;padding:5px 6px;text-align:center;font-size:11px;">${GST_RATE}%</td>
+        <td style="border-right:1px solid #aaa;padding:5px 6px;text-align:center;font-size:11px;">${gstRateLabel}</td>
         <td style="border-right:1px solid #aaa;padding:5px 6px;text-align:center;font-size:11px;">
           ${(() => {
             const qSpec = bill.specifications.find(
@@ -781,18 +945,8 @@ const generateHTML = (bill, client) => {
         )
         .join("")}
 
-      <!-- IGST row -->
-      <tr>
-        <td style="border-left:1px solid #aaa;border-right:1px solid #aaa;border-top:1px solid #aaa;"></td>
-        <td style="border-right:1px solid #aaa;border-top:1px solid #aaa;padding:5px 6px;text-align:right;font-size:10.5px;color:#333;">
-          IGST Output-${GST_RATE}% (${companyInfo.stateName})
-        </td>
-        <td style="border-right:1px solid #aaa;border-top:1px solid #aaa;"></td>
-        <td style="border-right:1px solid #aaa;border-top:1px solid #aaa;"></td>
-        <td style="border-right:1px solid #aaa;border-top:1px solid #aaa;padding:5px 6px;text-align:center;font-size:10.5px;">${GST_RATE}</td>
-        <td style="border-right:1px solid #aaa;border-top:1px solid #aaa;padding:5px 6px;text-align:center;font-size:10.5px;">%</td>
-        <td style="border-right:1px solid #aaa;border-top:1px solid #aaa;padding:5px 6px;text-align:right;font-size:10.5px;">${formatINR(gstAmount)}</td>
-      </tr>
+      <!-- Tax row(s) -->
+      ${taxRowsHTML}
 
       <!-- Round Off row -->
       <tr>
@@ -839,26 +993,7 @@ const generateHTML = (bill, client) => {
   </div>
 
   <!-- GST / Tax Breakup Table -->
-  <table class="tax-table">
-    <thead>
-      <tr>
-        <th>HSN/SAC</th>
-        <th>Taxable Value (₹)</th>
-        <th>IGST Rate</th>
-        <th>IGST Amount (₹)</th>
-        <th>Total Amount (₹)</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>${hsnCode}</td>
-        <td>${formatINR(baseAmount)}</td>
-        <td>${GST_RATE}%</td>
-        <td>${formatINR(gstAmount)}</td>
-        <td><strong>${formatINR(totalAmount)}</strong></td>
-      </tr>
-    </tbody>
-  </table>
+  ${taxBreakupTableHTML}
 
   <!-- Amount Breakup Box -->
   <div class="amount-box" style="margin-top:0;">
@@ -866,10 +1001,7 @@ const generateHTML = (bill, client) => {
       <span>Taxable Amount (Before GST)</span>
       <span>₹ ${formatINR(baseAmount)}</span>
     </div>
-    <div class="amount-row">
-      <span>IGST @ ${GST_RATE}%</span>
-      <span>₹ ${formatINR(gstAmount)}</span>
-    </div>
+    ${taxAmountRowsHTML}
     <div class="amount-row total-row">
       <span>Total Amount Payable</span>
       <span>₹ ${formatINR(totalAmount)}</span>

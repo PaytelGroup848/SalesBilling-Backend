@@ -24,6 +24,15 @@ const clientSchema = new mongoose.Schema(
     gstNumber: {
       type: String,
     },
+    country: {
+      type: String,
+    },
+    state: {
+      type: String,
+    },
+    stateCode: {
+      type: String,
+    },
     salesRepName: {
       type: String,
     },

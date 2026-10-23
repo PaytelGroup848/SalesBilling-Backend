@@ -44,6 +44,19 @@ const updateBill = async (req, res) => {
   }
 };
 
+const updateRemark = async (req, res) => {
+  try {
+    const bill = await billService.updateRemark(
+      req.params.id,
+      req.body,
+      req.user,
+    );
+    return successResponse(res, bill, "Remark updated successfully");
+  } catch (error) {
+    return errorResponse(res, error.message);
+  }
+};
+
 const deleteBill = async (req, res) => {
   try {
     const result = await billService.deleteBill(req.params.id, req.user);
@@ -72,6 +85,7 @@ const approveBill = async (req, res) => {
       req.params.id,
       req.user.id,
       req.body.billNumber,
+      req.body.remark,
     );
 
     return successResponse(res, bill, "Bill approved successfully");
@@ -208,6 +222,9 @@ const exportBillsExcel = async (req, res) => {
       renewalFilter,
       renewalStartDate,
       renewalEndDate,
+      billingDateFilter,
+      billingStartDate,
+      billingEndDate,
     } = req.query;
 
     // Build filter (same as getBills)
@@ -238,6 +255,32 @@ const exportBillsExcel = async (req, res) => {
     if (status) filter.status = status;
     if (service) filter.service = service;
     if (salesPerson) filter.createdBy = salesPerson;
+
+    // Billing date filters
+    if (billingStartDate || billingEndDate) {
+      filter.billingDate = {};
+      if (billingStartDate) filter.billingDate.$gte = new Date(billingStartDate);
+      if (billingEndDate) filter.billingDate.$lte = new Date(billingEndDate);
+    } else if (billingDateFilter) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      if (billingDateFilter === "today") {
+        filter.billingDate = { $gte: today, $lt: tomorrow };
+      } else if (billingDateFilter === "this_week") {
+        const weekStart = new Date(today);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        filter.billingDate = { $gte: weekStart, $lt: weekEnd };
+      } else if (billingDateFilter === "this_month") {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        filter.billingDate = { $gte: monthStart, $lt: monthEnd };
+      }
+    }
 
     // Renewal date filters
     if (renewalStartDate || renewalEndDate) {
@@ -291,6 +334,7 @@ const exportBillsExcel = async (req, res) => {
     if (status) filename += `_${status}`;
     if (service) filename += `_${service}`;
     if (renewalFilter) filename += `_${renewalFilter}`;
+    if (billingDateFilter) filename += `_${billingDateFilter}`;
 
     filename += ".xlsx";
 
@@ -317,6 +361,7 @@ module.exports = {
   getBills,
   getBillById,
   updateBill,
+  updateRemark,
   deleteBill,
   submitBill,
   approveBill,

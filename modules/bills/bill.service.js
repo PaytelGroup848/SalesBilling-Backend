@@ -10,7 +10,6 @@ const generateBillNumber = async () => {
 
   const lastTwoDigitOfCurrentYear = String(currentYear).slice(-2);
 
-  // const prefix = `INV-${currentYear}-`;
   const prefix = `CLOUDE-${lastTwoDigitOfCurrentYear}-`;
 
   const latestBill = await Bill.findOne({
@@ -43,6 +42,7 @@ const createBill = async (billData, userId) => {
     billingDate: billData.billingDate,
     renewalDate: billData.renewalDate,
     amount: billData.amount,
+    remark: billData.remark || "",
     status: "draft",
     parentBill: billData.parentBillId || undefined,
   });
@@ -259,6 +259,31 @@ const updateBill = async (id, updateData, user) => {
   return updatedBill;
 };
 
+const updateRemark = async (id, data, user) => {
+  const bill = await Bill.findById(id);
+  if (!bill) {
+    throw new Error("Bill not found");
+  }
+
+  const canEditSalesRemark = [ROLES.SALES, ROLES.SUPERADMIN].includes(
+    user.role,
+  );
+  const canEditAccountantRemark = [ROLES.ACCOUNTANT, ROLES.SUPERADMIN].includes(
+    user.role,
+  );
+
+  if (data.remark !== undefined && canEditSalesRemark) {
+    bill.remark = String(data.remark).trim();
+  }
+
+  if (data.accountantRemark !== undefined && canEditAccountantRemark) {
+    bill.accountantRemark = String(data.accountantRemark).trim();
+  }
+
+  await bill.save();
+  return bill.populate("client createdBy approvedBy correctionBy");
+};
+
 const deleteBill = async (id, user) => {
   const bill = await Bill.findById(id);
   if (!bill) {
@@ -297,7 +322,7 @@ const submitBill = async (id, userId) => {
   return bill.populate("client createdBy approvedBy correctionBy");
 };
 
-const approveBill = async (id, userId, billNumber) => {
+const approveBill = async (id, userId, billNumber, remark) => {
   const bill = await Bill.findById(id);
 
   if (!bill) {
@@ -306,6 +331,11 @@ const approveBill = async (id, userId, billNumber) => {
 
   if (bill.status !== "pending_approval") {
     throw new Error("Only pending approval bills can be approved");
+  }
+
+  // optional remark added by accountant while approving (stored separately)
+  if (remark !== undefined && remark !== null) {
+    bill.accountantRemark = String(remark).trim();
   }
 
   // if accountant changed invoice number
@@ -411,6 +441,7 @@ module.exports = {
   getBills,
   getBillById,
   updateBill,
+  updateRemark,
   deleteBill,
   submitBill,
   approveBill,
