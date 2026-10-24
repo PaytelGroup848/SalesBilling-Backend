@@ -246,6 +246,27 @@ const getBills = async (query, user) => {
   };
 };
 
+const getBillStats = async (user) => {
+  const roleFilter = {};
+
+  if (user.role === ROLES.SALES) {
+    roleFilter.createdBy = user.id;
+  } else if (user.role === ROLES.ACCOUNTANT) {
+    roleFilter.status = { $in: ["pending_approval", "approved", "correction"] };
+  }
+
+  const [total, draft, pending_approval, approved, correction] =
+    await Promise.all([
+      Bill.countDocuments(roleFilter),
+      Bill.countDocuments({ ...roleFilter, status: "draft" }),
+      Bill.countDocuments({ ...roleFilter, status: "pending_approval" }),
+      Bill.countDocuments({ ...roleFilter, status: "approved" }),
+      Bill.countDocuments({ ...roleFilter, status: "correction" }),
+    ]);
+
+  return { total, draft, pending_approval, approved, correction };
+};
+
 const getBillById = async (id) => {
   const bill = await Bill.findById(id)
     .populate("client")
@@ -460,6 +481,7 @@ const sendBillEmailToClient = async (id, userId) => {
 module.exports = {
   createBill,
   getBills,
+  getBillStats,
   getBillById,
   updateBill,
   updateRemark,

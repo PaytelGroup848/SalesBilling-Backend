@@ -13,6 +13,7 @@ router.use(auth);
 
 router.post("/", authorize(ROLES.SALES), billController.createBill);
 router.get("/", billController.getBills);
+router.get("/stats", billController.getBillStats);
 router.get("/:id", billController.getBillById);
 router.put("/:id", billController.updateBill);
 router.patch("/:id/remark", billController.updateRemark);

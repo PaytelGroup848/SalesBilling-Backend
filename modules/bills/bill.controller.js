@@ -22,6 +22,15 @@ const getBills = async (req, res) => {
   }
 };
 
+const getBillStats = async (req, res) => {
+  try {
+    const stats = await billService.getBillStats(req.user);
+    return successResponse(res, stats);
+  } catch (error) {
+    return errorResponse(res, error.message);
+  }
+};
+
 const getBillById = async (req, res) => {
   try {
     const bill = await billService.getBillById(req.params.id);
@@ -359,6 +368,7 @@ const exportBillsExcel = async (req, res) => {
 module.exports = {
   createBill,
   getBills,
+  getBillStats,
   getBillById,
   updateBill,
   updateRemark,

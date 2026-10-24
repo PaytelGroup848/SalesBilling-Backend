@@ -66,12 +66,15 @@ const CGST_RATE = GST_RATE / 2; // 9%
 const SGST_RATE = GST_RATE / 2; // 9%
 const SELLER_STATE_CODE = "07"; // Delhi (seller state)
 
-// Tax type based on client's state code:
-// - empty  -> no GST
+// Tax type based on client's country/state code:
+// - country empty (legacy clients, before country field) -> IGST 18%
+// - empty state code -> no GST
 // - "07"   -> CGST + SGST (intra-state)
 // - others -> IGST (inter-state)
 const getTaxType = (client) => {
+  const country = String(client?.country || "").trim();
   const code = String(client?.stateCode || "").trim();
+  if (!country) return "igst";
   if (!code) return "none";
   if (code === SELLER_STATE_CODE) return "cgst_sgst";
   return "igst";
